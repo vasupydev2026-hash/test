@@ -1,1 +1,1 @@
-web: gunicorn P1.wsgi
+web: gunicorn kavaro.wsgi
