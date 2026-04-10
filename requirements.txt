@@ -10,4 +10,5 @@ django-extensions
 djangorestframework-simplejwt
 tomlkit
 Pillow
+WeasyPrint
 razorpay
