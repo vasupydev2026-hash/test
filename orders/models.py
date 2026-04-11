@@ -71,7 +71,9 @@ class Order(models.Model):
         max_length=50,
         default="not_created"
     )
+
 ### order status  ###
+
     def update_status_from_items(self):
         statuses = set(self.items.values_list("status", flat=True))
 
@@ -251,5 +253,7 @@ class ReturnRequest(models.Model):
 
     def __str__(self):
         return f"Return {self.order.order_code} - {self.item.product.name}"
+
+
 
 

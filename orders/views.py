@@ -7,22 +7,11 @@ import json
 from django.http import JsonResponse
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-import json
-
-from decimal import Decimal, ROUND_HALF_UP
-import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-from django.urls import reverse
-
 from decimal import Decimal, ROUND_HALF_UP
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
-from django.urls import reverse
-import json
 from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
@@ -248,15 +237,15 @@ def place_confirm_order(request):
     cart_items.delete()
 
     # -----------------------------
-    # DELHIVERY SHIPPING (COD)
-    # -----------------------------
-    from orders.delhivery import ship_order
-
-    try:
-        ship_order(order)
-    except Exception as e:
-        print("Delhivery shipping error:", str(e))
-    
+    # # DELHIVERY SHIPPING (COD)
+    # # -----------------------------
+    # from orders.delhivery import ship_order
+    #
+    # try:
+    #     ship_order(order)
+    # except Exception as e:
+    #     print("Delhivery shipping error:", str(e))
+    #
     
     # -------------------------------
     # 📧 CONFIRMATION EMAIL
@@ -282,14 +271,7 @@ def payment_success(request):
     return redirect("order_success")
 
 
-############################ by vasu
 
-# @login_required
-# def order_success(request):
-#     latest_order = Order.objects.filter(user=request.user).latest("created_at")
-#     return render(request, "orders/order_success.html", {
-#         "order": latest_order
-#     })
 @login_required
 def order_success(request):
     latest_order = (
@@ -542,8 +524,26 @@ def razorpay_payment_success(request):
     # -------------------------------
     # 🚚 CREATE SHIPMENT (AFTER PAID)
     # -------------------------------
-    from orders.delhivery import ship_order
-    ship_order(order)
+    # from orders.delhivery import ship_order
+    # ship_order(order)
+
+    shiprocket_response = create_shiprocket_order(order)
+
+    if shiprocket_response.get("status_code") == 1:
+        shipment_id = shiprocket_response.get("shipment_id")
+
+        awb_response = assign_courier_awb(shipment_id)
+
+        if awb_response.get("awb_code"):
+            order.tracking_id = awb_response["awb_code"]
+            order.courier_name = awb_response.get("courier_name")
+            order.shipping_status = "shipped"
+            order.save()
+
+            print("✅ AWB GENERATED:", order.tracking_id)
+    print(shiprocket_response)
+
+    return JsonResponse({"message": "Order placed successfully"})
 
     # -------------------------------
     # 📧 CONFIRMATION EMAIL
@@ -742,7 +742,9 @@ def cancel_order_item(request, item_id):
         "item_id": order_item.id,
         "totals": totals
     })
-##### RETURN FUNCTIONALITIES  #######
+
+
+# ##### RETURN FUNCTIONALITIES  #######
 
 
 from .models import ReturnRequest
@@ -887,15 +889,16 @@ def process_refund(rr):
             }
         )
 
+
     rr.refund_amount = refund_amount
     rr.status = "refunded"
     rr.refunded_at = timezone.now()
     rr.save()
 
+
     # Update order payment status
     order.payment_status = "refunded"
     order.save(update_fields=["payment_status"])
-
 
 
 @login_required
@@ -927,6 +930,7 @@ def returns_list(request):
     })
 
 
+
 @login_required
 def return_detail(request, return_id):
     if not request.user.is_staff:
@@ -938,7 +942,11 @@ def return_detail(request, return_id):
         "rr": rr
     })
 
-#### EMAIL SERVICE #####
+
+
+# #### EMAIL SERVICE #####
+
+
 
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -961,7 +969,8 @@ def send_order_confirmation_email(order):
     )
 
 
-# orders/views.py
+# # orders/views.py
+
 from django.shortcuts import render, get_object_or_404
 from .models import OrderItem
 
@@ -971,24 +980,145 @@ def track_order_item(request, item_id):
         'item': item
     })
 
-from django.contrib.admin.views.decorators import staff_member_required
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib import messages
-from orders.models import Order
-from orders.delhivery import ship_order
 
-@staff_member_required
-def ship_order_view(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
 
-    try:
-        ship_order(order)
-        messages.success(
-            request,
-            f"Order {order.order_code} shipped successfully via Delhivery."
-        )
-    except Exception as e:
-        messages.error(request, str(e))
+# from django.contrib.admin.views.decorators import staff_member_required
+# from django.shortcuts import get_object_or_404, redirect
+# from django.contrib import messages
+# from orders.models import Order
+# from orders.delhivery import ship_order
+#
+# @staff_member_required
+# def ship_order_view(request, order_id):
+#     order = get_object_or_404(Order, id=order_id)
+#
+#     try:
+#         ship_order(order)
+#         messages.success(
+#             request,
+#             f"Order {order.order_code} shipped successfully via Delhivery."
+#         )
+#     except Exception as e:
+#         messages.error(request, str(e))
+#
+#     return redirect("admin:orders_order_change", order.id)
+#
 
-    return redirect("admin:orders_order_change", order.id)
 
+
+
+##### ship rocket
+
+import requests
+
+def get_shiprocket_token():
+    import requests
+
+    url = "https://apiv2.shiprocket.in/v1/external/auth/login"
+
+    payload = {
+        "email": "agvasup123@gmail.com",
+        "password": "tRJW4X%e&AceGABy0%8gndOFE60bZpJl"
+    }
+
+    response = requests.post(url, json=payload)
+    data = response.json()
+
+    print("Shiprocket Login Response:", data)  # DEBUG
+
+    if 'token' in data:
+        return data['token']
+    else:
+        raise Exception(f"Shiprocket Auth Failed: {data}")
+
+def create_shiprocket_order(order):
+    token = get_shiprocket_token()
+
+    url = "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc"
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    address = order.address
+    user = order.user
+    payload = {
+        "order_id": str(order.order_code),
+        "order_date": order.created_at.strftime("%Y-%m-%d %H:%M"),
+
+        # ✅ ADD THIS LINE (CRITICAL FIX)
+        "channel_id": "",
+
+        "pickup_location": "Primary",
+
+        "billing_customer_name": address.fullname,
+        "billing_last_name": "",
+        "billing_address": address.address1,
+        "billing_address_2": address.address2 or "",
+        "billing_city": address.city,
+        "billing_pincode": address.pincode,
+        "billing_state": address.state,
+        "billing_country": address.country,
+        "billing_email": user.email,
+        "billing_phone": str(address.mobile)[-10:],
+
+        "shipping_customer_name": address.fullname,
+        "shipping_last_name": "",
+        "shipping_address": address.address1,
+        "shipping_address_2": address.address2 or "",
+        "shipping_city": address.city,
+        "shipping_pincode": address.pincode,
+        "shipping_state": address.state,
+        "shipping_country": address.country,
+        "shipping_email": user.email,
+        "shipping_phone": str(address.mobile)[-10:],
+
+        # ✅ ADD THIS BACK
+        "shipping_is_billing": True,
+
+        "order_items": [
+            {
+                "name": item.product_name or "Product",
+                "sku": item.product_sku or "SKU123",
+                "units": item.quantity,
+                "selling_price": float(item.price)
+            }
+            for item in order.items.all()
+        ],
+
+        "payment_method": "Prepaid",
+        "sub_total": float(order.total_amount),
+
+        "length": 10,
+        "breadth": 10,
+        "height": 10,
+        "weight": 0.5
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    print("Shiprocket Order Response:", response.text)
+    print("FINAL PAYLOAD:", payload)
+
+    return response.json()
+
+
+
+import requests
+import random
+
+def assign_courier_awb_dummy(order):
+    fake_awb = "AWB" + str(random.randint(10000000, 99999999))
+
+    order.tracking_id = fake_awb
+    order.courier_name = "ShippRocket (Dummy)"
+    order.shipping_status = "shipped"
+    order.shipped_at = timezone.now()
+    order.save()
+
+    print("✅ Dummy AWB:", fake_awb)
+
+    return {
+        "awb_code": fake_awb,
+        "courier_name": "ShippRocket"
+    }

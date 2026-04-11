@@ -28,7 +28,7 @@ urlpatterns = [
             name="place_confirm_order"
         ),
         # orders/urls.py
-        path("ship/<int:order_id>/", views.ship_order_view, name="ship_order"),
+        # path("ship/<int:order_id>/", views.ship_order_view, name="ship_order"),
         path("returns/", views.returns_list, name="returns_list"),
         path("returns/<int:return_id>/", views.return_detail, name="return_detail"),
         path("returns/<int:return_id>/approve/", views.approve_return, name="approve_return"),
@@ -45,4 +45,6 @@ urlpatterns = [
                 views.payment_failed_page,
                 name="payment_failed_page"
         ),
+
+
 ]

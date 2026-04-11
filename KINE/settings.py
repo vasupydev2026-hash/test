@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-6mcqm@%$9jn&gre2^@@6#x2kt&$pdi@kra-fw#!p@b!a%hh)kp
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "*",
+    "*"
 ]
 
 
@@ -64,6 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
 ]
 
 ROOT_URLCONF = 'KINE.urls'
@@ -131,11 +133,10 @@ LOGIN_URL = '/accounts/login/'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+import os
 
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -165,13 +166,28 @@ RAZORPAY_KEY_SECRET = "9WED8m2OuuAJv8VpKGrurJ5M"
 #
 # db.models.BigAutoField'
 
+# # settings.py
+# DELHIVERY_API_TOKEN = "5dcd6d9356c7a9bf624f1b536094f23471a00a45"
+# DELHIVERY_BASE_URL = "https://track.delhivery.com"
+#
+# DELHIVERY_PICKUP_LOCATION = "PRIMARY"
+# # ⚠️ Must EXACTLY match Delhivery dashboard pickup name
+#
+# DELHIVERY_RETURN_ADDRESS_ID = ""  # optional for now
+# DELHIVERY_MODE = "test"
+#
 # settings.py
-DELHIVERY_API_TOKEN = "5dcd6d9356c7a9bf624f1b536094f23471a00a45"
-DELHIVERY_BASE_URL = "https://track.delhivery.com"
 
-DELHIVERY_PICKUP_LOCATION = "PRIMARY"
-# ⚠️ Must EXACTLY match Delhivery dashboard pickup name
+SHIPROCKET_EMAIL = "agvasup123@gmail.com"
+SHIPROCKET_PASSWORD = "tRJW4X%e&AceGABy0%8gndOFE60bZpJl"
 
-DELHIVERY_RETURN_ADDRESS_ID = ""  # optional for now
-DELHIVERY_MODE = "test"
-
+# Redis cache (for token)
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
